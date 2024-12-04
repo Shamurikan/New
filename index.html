@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Audio Player</title>
+</head>
+<body>
+    <h1>YouTube Audio Player</h1>
+    <label for="searchQuery">Search YouTube:</label>
+    <input type="text" id="searchQuery" placeholder="e.g., Top songs 2024" />
+    <button id="searchButton">Search</button>
+
+    <h2>Search Results</h2>
+    <ul id="results"></ul>
+
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        document.getElementById('searchButton').addEventListener('click', () => {
+            const query = document.getElementById('searchQuery').value;
+
+            if (!query) {
+                alert('Please enter a search term!');
+                return;
+            }
+
+            // Send a POST request to search videos
+            fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query }),
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch search results.');
+                    }
+                    return response.json();
+                })
+                .then((videos) => {
+                    const resultsList = document.getElementById('results');
+                    resultsList.innerHTML = ''; // Clear previous results
+
+                    videos.forEach((video) => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = video.title;
+
+                        const playButton = document.createElement('button');
+                        playButton.textContent = 'Play Audio';
+                        playButton.addEventListener('click', () => {
+                            // Request the audio stream URL
+                            fetch('/download-audio', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ videoId: video.videoId }),
+                            })
+                                .then((response) => {
+                                    if (!response.ok) {
+                                        throw new Error('Failed to fetch audio stream URL.');
+                                    }
+                                    return response.json();
+                                })
+                                .then((data) => {
+                                    const audioPlayer = document.getElementById('audioPlayer');
+                                    audioPlayer.src = data.streamUrl; // Set the audio stream URL
+                                    audioPlayer.play(); // Play the audio
+                                })
+                                .catch((error) => {
+                                    alert('Failed to play audio. Please try again.');
+                                    console.error(error);
+                                });
+                        });
+
+                        listItem.appendChild(playButton);
+                        resultsList.appendChild(listItem);
+                    });
+                })
+                .catch((error) => {
+                    alert('Failed to fetch search results. Please try again.');
+                    console.error(error);
+                });
+        });
+    </script>
+</body>
+</html>
